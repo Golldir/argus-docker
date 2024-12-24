@@ -30,7 +30,9 @@ services:
     container_name: taskiq-scheduler-test
     ports: [ ]
     command: [ taskiq, scheduler, tasks.tkq:scheduler, tasks.tasks ]
+    restart: always
     depends_on:
+      - nginx
       - db
       - redis
       - rabbitmq
@@ -72,3 +74,8 @@ services:
     container_name: rabbitmq-argus
     ports:
       - "5672:5672"
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
