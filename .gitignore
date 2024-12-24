@@ -3,3 +3,4 @@ app/dependencies
 frontend/public
 frontend/src
 frontend/index.html
+frontend/node_modules
