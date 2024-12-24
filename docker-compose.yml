@@ -1,0 +1,74 @@
+name: argus-test
+
+services:
+  fastapi:
+    &app
+    container_name: fastapi-test
+    build:
+      context: ./app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+    ports:
+      - '8000:8000'
+    depends_on:
+      - db
+
+  taskiq-worker:
+
+    <<: *app
+    container_name: taskiq-worker-test
+    ports: [ ]
+    command: [ taskiq, worker, tasks.tasks:broker ]
+    depends_on:
+      - db
+      - redis
+      - rabbitmq
+      - fastapi
+
+  taskiq-scheduler:
+
+    <<: *app
+    container_name: taskiq-scheduler-test
+    ports: [ ]
+    command: [ taskiq, scheduler, tasks.tkq:scheduler, tasks.tasks ]
+    depends_on:
+      - db
+      - redis
+      - rabbitmq
+      - fastapi
+      - taskiq-worker
+
+  nginx:
+    container_name: nginx-test
+    image: nginx:latest
+    ports:
+      - '80:80'
+    volumes:
+      - ./frontend/dist:/usr/share/nginx/html
+      - ./frontend/media:/var/www/argus/media
+      - ./nginx.conf:/etc/nginx/conf.d/nginx.conf
+    depends_on:
+      - fastapi
+
+  db:
+    image: postgres:16
+    container_name: postgres-argus
+    volumes:
+      - ./tables.sql:/docker-entrypoint-initdb.d/tables.sql
+    environment:
+      - POSTGRES_USER=argus
+      - POSTGRES_PASSWORD=1234
+      - POSTGRES_DB=argusdb
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:latest
+    container_name: redis-argus
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:latest
+    container_name: rabbitmq-argus
+    ports:
+      - "5672:5672"
